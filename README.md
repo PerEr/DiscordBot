@@ -1,13 +1,22 @@
 Based on: https://betterprogramming.pub/build-a-discord-bot-with-aws-lambda-api-gateway-cc1cff750292
 
-Configure discord, file registration/.env, add fields:
-BOT_TOKEN=MTIx....
-APP_ID=1216...
-GUILD_ID=1214...
+Configure your app in the discord console, the create the file registration/.env with these fields:
+```bash
+BOT_TOKEN=....
+APP_ID=...
+```
 
-Then:
+Then in the folder register:
+```bash
 npm i
 node register.js
+```
 
-To publish code, et AWS credentials, paste the to bash, then run ./publishit.sh
+Your commands will now be regsitered with discord.
 
+Finally, login to AWS and get temprary AWS credentials, paster these to the command promt before running
+```bash
+./publishit.sh
+```
+
+This command assumes an API and a lambda has been created, see original article for details.

@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "axios": "^1.7.2",
     "tweetnacl": "^1.0.3"
   }
 }

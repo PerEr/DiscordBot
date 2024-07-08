@@ -1,25 +1,23 @@
 const nacl = require('tweetnacl');
-const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
-// Cache loaded commands
-let commandsCache = null;
+const createResponse = (statusCode, body) => ({
+  statusCode,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body)
+});
 
-// Function to load commands
-const loadCommands = () => {
-  if (!commandsCache) {
-    const commandsDir = path.join(__dirname, 'commands');
-    const commandFiles = fs.readdirSync(commandsDir);
-    commandsCache = commandFiles.reduce((commands, file) => {
-      const command = require(path.join(commandsDir, file));
-      commands[command.name] = command;
-      return commands;
-    }, {});
+let commandsCache = {};
+
+const loadCommand = async (commandName) => {
+  if (!commandsCache[commandName]) {
+    const commandPath = path.join(__dirname, 'commands', `cmd_${commandName}.js`);
+    commandsCache[commandName] = require(commandPath);
   }
-  return commandsCache;
+  return commandsCache[commandName];
 };
 
-// Function to verify request signature
 const verifySignature = (event) => {
   const PUBLIC_KEY = process.env.PUBLIC_KEY;
   const signature = event.headers['x-signature-ed25519'];
@@ -33,34 +31,41 @@ const verifySignature = (event) => {
   );
 };
 
-// Function to generate response
-const generateResponse = (statusCode, body) => {
-  return {
-    statusCode: statusCode,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  };
+const sendDeferredResponse = async (interactionId, interactionToken) => {
+  const url = `https://discord.com/api/v10/interactions/${interactionId}/${interactionToken}/callback`;
+  await axios.post(url, { type: 5 }, { headers: { 'Content-Type': 'application/json' } });
+};
+
+const sendFollowUpMessage = async (applicationId, interactionToken, content) => {
+  const url = `https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`;
+  await axios.post(url, { content }, { headers: { 'Content-Type': 'application/json' } });
 };
 
 exports.handler = async (event) => {
-
   if (!verifySignature(event)) {
-    return generateResponse(401, 'invalid request signature');
+    return createResponse(401, { error: 'invalid request signature' });
   }
 
   const body = JSON.parse(event.body);
 
   if (body.type === 1) {
-    return generateResponse(200, { "type": 1 });
+    return createResponse(200, { type: 1 });
   }
 
-  const commands = loadCommands();
-  const command = commands[body.data.name];
-  if (command) {
-    return command.execute(body);
+  if (body.type === 2) { // Application Command
+    try {
+      const command = await loadCommand(body.data.name);
+      if (command) {
+        await sendDeferredResponse(body.id, body.token);
+        const response = await command.execute(body.data.options[0].value);
+        await sendFollowUpMessage(body.application_id, body.token, response.body);
+        return createResponse(200, { type: 5 });
+      }
+    } catch (error) {
+      console.error('Error executing {body.data.name}:', error);
+      await sendFollowUpMessage(body.application_id, body.token, 'An error occurred while processing {body.data.name}.');
+      return createResponse(200, { type: 5 });
+    }
   }
-
-  return generateResponse(404, 'command not found');
+  return createResponse(404, { error: 'not found' });
 };

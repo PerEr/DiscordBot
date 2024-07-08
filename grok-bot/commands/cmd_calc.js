@@ -1,5 +1,3 @@
-const { createSuccessResponse, createErrorResponse } = require('./util');
-
 function isValidMathExpression(expression) {
   const validExpression = /^[0-9+\-*/().\s]+$/;
   return validExpression.test(expression);
@@ -21,18 +19,18 @@ module.exports = {
       required: true,
     }
   ],
-  execute: async (body) => {
-    const expression = body.data.options[0].value;
+  execute: async (value) => {
+    const expression =value;
 
     if (!isValidMathExpression(expression)) {
-      return createErrorResponse(`Invalid expression: ${expression}`);
+      return { statusCode: 400, body: `Invalid expression: ${expression}` };
     }
 
     try {
       const result = evaluateMathExpression(expression);
-      return createSuccessResponse(`${expression} = ${result}`);
+      return { statusCode: 200, body: `${expression} = ${result}` };
     } catch (error) {
-      return createErrorResponse(`Error evaluating expression: ${expression}`);
+      return { statusCode: 500, body: `Error evaluating expression: ${expression}` };
     }
   }
 };

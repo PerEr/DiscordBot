@@ -8,6 +8,9 @@ ZIPPIS="dist/${BOT}_${TIMESTAMP}.zip"
 
 pushd $BOT
 
+# Install dependencies as specified in package-lock.json
+npm ci
+
 # Create a zip file in the starting directory
 zip -r "$start_dir/${ZIPPIS}" .
 
