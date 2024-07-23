@@ -54,18 +54,30 @@ exports.handler = async (event) => {
 
   if (body.type === 2) { // Application Command
     try {
+      // Immediately respond with a deferred response
+      await sendDeferredResponse(body.id, body.token);
+      
       const command = await loadCommand(body.data.name);
       if (command) {
-        await sendDeferredResponse(body.id, body.token);
-        const response = await command.execute(body.data.options[0].value);
-        await sendFollowUpMessage(body.application_id, body.token, response.body);
-        return createResponse(200, { type: 5 });
+        const query = body.data.options[0].value;
+        const response = await command.execute(query);
+        
+        // Send query message
+        const formattedQuery = `Pondering on the question: *${query}* ...`;
+        await sendFollowUpMessage(body.application_id, body.token, formattedQuery);
+        
+        // Send response message
+        const formattedResponse = `${response.body}`;
+        await sendFollowUpMessage(body.application_id, body.token, formattedResponse);
+        
+        // No need to return another response here
       }
     } catch (error) {
-      console.error('Error executing {body.data.name}:', error);
-      await sendFollowUpMessage(body.application_id, body.token, 'An error occurred while processing {body.data.name}.');
-      return createResponse(200, { type: 5 });
+      console.error(`Error executing ${body.data.name}:`, error);
+      await sendFollowUpMessage(body.application_id, body.token, `An error occurred while processing ${body.data.name}.`);
     }
+    // We've handled the interaction, so just return a 200 OK
+    return createResponse(200);
   }
   return createResponse(404, { error: 'not found' });
 };
