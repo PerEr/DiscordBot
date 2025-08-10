@@ -1,6 +1,10 @@
 const anthropic = require('@anthropic-ai/sdk');
 const axios = require('axios');
 
+const DISCORD_MESSAGE_LIMIT = 2000;
+const MESSAGE_CHUNK_SIZE = 1800;
+const NOT_FOUND = -1;
+
 const client = new anthropic.Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -10,8 +14,8 @@ const sendFollowUpMessage = async (applicationId, interactionToken, content) => 
   // Discord API has a 2000 character limit, so we need to split messages.
   // We'll split by newline first, then by sentence, and finally by word.
   let chunks = [content];
-  if (content.length > 2000) {
-    chunks = content.match(/[\s\S]{1,2000}/g) || [];
+  if (content.length > DISCORD_MESSAGE_LIMIT) {
+    chunks = content.match(new RegExp(`[\\s\\S]{1,${DISCORD_MESSAGE_LIMIT}}`, 'g')) || [];
   }
 
   for (const chunk of chunks) {
@@ -61,13 +65,13 @@ function createBot(name, description, prompt) {
           if (text) {
             messageBuffer += text;
 
-            if (messageBuffer.length >= 1800) {
+            if (messageBuffer.length >= MESSAGE_CHUNK_SIZE) {
               let lastBreak = messageBuffer.lastIndexOf('\n');
-              if (lastBreak === -1) {
+              if (lastBreak === NOT_FOUND) {
                 lastBreak = messageBuffer.lastIndexOf('. ');
               }
-              if (lastBreak === -1) {
-                lastBreak = 1800;
+              if (lastBreak === NOT_FOUND) {
+                lastBreak = MESSAGE_CHUNK_SIZE;
               }
 
               const toSend = messageBuffer.substring(0, lastBreak + 1);
