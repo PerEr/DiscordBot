@@ -60,17 +60,9 @@ exports.handler = async (event) => {
       const command = await loadCommand(body.data.name);
       if (command) {
         const query = body.data.options[0].value;
-        const response = await command.execute(query);
         
-        // Send query message
-        const formattedQuery = `Pondering on the question: *${query}* ...`;
-        await sendFollowUpMessage(body.application_id, body.token, formattedQuery);
-        
-        // Send response message
-        const formattedResponse = `${response.body}`;
-        await sendFollowUpMessage(body.application_id, body.token, formattedResponse);
-        
-        // No need to return another response here
+        // The execute function will now handle sending messages, including the initial query message.
+        await command.execute(query, body.application_id, body.token);
       }
     } catch (error) {
       console.error(`Error executing ${body.data.name}:`, error);

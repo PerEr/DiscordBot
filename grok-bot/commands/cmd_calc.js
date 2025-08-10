@@ -1,3 +1,10 @@
+const axios = require('axios');
+
+const sendFollowUpMessage = async (applicationId, interactionToken, content) => {
+  const url = `https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`;
+  await axios.post(url, { content }, { headers: { 'Content-Type': 'application/json' } });
+};
+
 function isValidMathExpression(expression) {
   const validExpression = /^[0-9+\-*/().\s]+$/;
   return validExpression.test(expression);
@@ -19,18 +26,19 @@ module.exports = {
       required: true,
     }
   ],
-  execute: async (value) => {
-    const expression =value;
+  execute: async (value, applicationId, interactionToken) => {
+    const expression = value;
 
     if (!isValidMathExpression(expression)) {
-      return { statusCode: 400, body: `Invalid expression: ${expression}` };
+      await sendFollowUpMessage(applicationId, interactionToken, `Invalid expression: ${expression}`);
+      return;
     }
 
     try {
       const result = evaluateMathExpression(expression);
-      return { statusCode: 200, body: `${expression} = ${result}` };
+      await sendFollowUpMessage(applicationId, interactionToken, `${expression} = ${result}`);
     } catch (error) {
-      return { statusCode: 500, body: `Error evaluating expression: ${expression}` };
+      await sendFollowUpMessage(applicationId, interactionToken, `Error evaluating expression: ${expression}`);
     }
   }
 };
